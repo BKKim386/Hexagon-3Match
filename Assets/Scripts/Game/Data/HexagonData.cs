@@ -33,7 +33,7 @@ namespace Game
                 BlockType.Normal => new NormalBlockData(id, pos),
                 BlockType.Top => new TopBlockData(id, pos),
                 _ => throw new ArgumentOutOfRangeException()
-            };
+            };  
         }
     }
     
@@ -42,7 +42,6 @@ namespace Game
         private Vector2Int _pos;
         private BlockColor _color;
         private BlockType _type;
-        private BlockView _view;
         
         public Vector2Int Pos => _pos;
         public BlockColor Color => _color;
@@ -55,19 +54,9 @@ namespace Game
             _color = (BlockColor)(id % 10);
             _type = (BlockType) (id / 10);
         }
-
-        public void SetView(BlockView blockView)
+        public void Move(Vector2Int goal)
         {
-            _view = blockView;
-        }
-
-        public void Move(Vector2Int goal, List<Vector2Int> path)
-        {
-            var prev = _pos;
             _pos = goal;
-
-            if (_view != null)
-                _view.Move(prev, path);
         }
 
         public void Change()
@@ -77,11 +66,6 @@ namespace Game
 
         public void Remove()
         {
-            if (_view != null)
-            {
-                MonoBehaviour.Destroy(_view.gameObject);
-                _view = null;
-            }
         }
     }
 

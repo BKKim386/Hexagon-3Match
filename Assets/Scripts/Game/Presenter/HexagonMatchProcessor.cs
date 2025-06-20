@@ -7,10 +7,13 @@ using UnityEngine;
 
 namespace Game
 {
-    public enum MatchType   //후에 패턴에 따라 아이템 생성하는데 사용
+    public enum MatchType   //매칭 아이템 생성 우선순위(내림차순)
     {
-        Line = 0,
-        Rectangle = 1,
+        None = 0,
+        Line_Three = 1,
+        Rectangle = 2,
+        Line_Four = 3,
+        Line_Five = 4
     }
 
     public class MatchInfo
@@ -22,6 +25,13 @@ namespace Game
         {
             Type = type;
             BlockList = blockList;
+        }
+
+        public Vector2Int GetCenter()
+        {
+            int center = BlockList.Count / 2;
+
+            return BlockList[center].Pos;
         }
     }
 
@@ -125,9 +135,19 @@ namespace Game
                     }
                 }
 
-                if(matchBlockList.Count >= 3)
+                MatchType type = MatchType.None;
+
+                if (matchBlockList.Count == 3)
                 {
-                    matchInfoList.Add(new MatchInfo(MatchType.Line, matchBlockList));
+                    matchInfoList.Add(new MatchInfo(MatchType.Line_Three, matchBlockList));
+                }
+                else if (matchBlockList.Count == 4)
+                {
+                    matchInfoList.Add(new MatchInfo(MatchType.Line_Four, matchBlockList));
+                }
+                else if (matchBlockList.Count >= 5)
+                {
+                    matchInfoList.Add(new MatchInfo(MatchType.Line_Five, matchBlockList));
                 }
             }
 

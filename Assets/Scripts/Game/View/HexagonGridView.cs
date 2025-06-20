@@ -13,10 +13,10 @@ namespace Game
         [SerializeField] private GameObject BackgroundPrefab;
         [SerializeField] private NormalBlockView NormalPrefab;
 
+        private Dictionary<HexagonBlockData, BlockView> _blockViewMap = new Dictionary<HexagonBlockData, BlockView>();
         private List<Vector3> _centers = new List<Vector3>();
 
-        //private List<SpriteRenderer> _backgroundSprites = new List<SpriteRenderer>();
-
+        public IReadOnlyDictionary<HexagonBlockData, BlockView> BlockMap => _blockViewMap;
 
         public void CreateMapBackground(List<Vector2Int> posList)
         {
@@ -38,15 +38,24 @@ namespace Game
             return newInstance;
         }
 
-        public NormalBlockView InstantiateBlock(HexagonBlockData data)
+        public BlockView InstantiateBlock(HexagonBlockData data)
         {
-            NormalBlockView newInstance = Instantiate(NormalPrefab, transform);
-            newInstance.transform.localScale = Vector3.one;
-            newInstance.transform.localPosition = Util.AxialToWorldPos(data.Pos, HexagonRadius);
+            if(_blockViewMap.ContainsKey(data))
+            {
+                return _blockViewMap[data];
+            }
+            else
+            {
+                BlockView newInstance = Instantiate(NormalPrefab, transform);
+                newInstance.transform.localScale = Vector3.one;
+                newInstance.transform.localPosition = Util.AxialToWorldPos(data.Pos, HexagonRadius);
 
-            newInstance.SetSprite(data.Color);
+                newInstance.SetSprite(data);
 
-            return newInstance;
+                _blockViewMap.Add(data, newInstance);
+
+                return newInstance;
+            }
         }
 
         public bool GetCloseBlock(Vector3 from, out Vector3? pos)
@@ -62,6 +71,23 @@ namespace Game
             }
             
             return false;
+        }
+
+        public void MoveBlock(HexagonBlockData data, Vector2Int prev, List<Vector2Int> path)
+        {
+            if (_blockViewMap.TryGetValue(data, out var instance))
+            {
+                instance.Move(prev, path);
+            }
+        }
+
+        public void RemoveBlock(HexagonBlockData data)
+        {
+            if(_blockViewMap.TryGetValue(data, out var instance))
+            {
+                _blockViewMap.Remove(data);
+                instance.Remove();
+            }
         }
     }
 }

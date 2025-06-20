@@ -3,7 +3,7 @@ using System.Collections;
 using System.Linq;
 using UnityEngine;
 
-namespace Game.Data
+namespace Game
 {
     public class HexagonGameManager : MonoBehaviour
     {
@@ -17,7 +17,7 @@ namespace Game.Data
 
         private void Start()
         {
-            _grid = new HexagonGrid();
+            _grid = new HexagonGrid(_gridView);
             _grid.CreateMap(Radius);
             _gridView.CreateMapBackground(_grid.Map.Keys.ToList());
 
@@ -52,7 +52,6 @@ namespace Game.Data
                         {
                             if(_gridView.GetCloseBlock(_camera.ScreenToWorldPoint(Input.mousePosition), out start))
                             {
-                                Debug.Log($"{start} {Util.WorldToAxialPos(start.Value, HexagonGridView.HexagonRadius)}");
                                 attractInput = true;
                             }
                         }
@@ -83,7 +82,7 @@ namespace Game.Data
 
                                     _grid.Swap(startAxial, currentAxial);
 
-                                    yield return new WaitForSeconds(0.2f);
+                                    yield return YieldInstance.WaitForSeconds(0.2f);
 
                                     var swapMatches = _matchProcessor.SearchMatches();
 
@@ -95,7 +94,7 @@ namespace Game.Data
                                     else
                                     {
                                         _grid.Swap(startAxial, currentAxial);
-                                        yield return new WaitForSeconds(0.2f);
+                                        yield return YieldInstance.WaitForSeconds(0.2f);
                                     }
 
                                     start = null;
@@ -114,15 +113,9 @@ namespace Game.Data
         {
             while (_grid.IsEmptyBlockExist())
             {
-                var newBlockData = _grid.SpawnNewBlock();
-                if(newBlockData != null)
-                {
-                    var blockView = _gridView.InstantiateBlock(newBlockData);
-                    newBlockData.SetView(blockView);
-                }
-                
+                _grid.SpawnNewBlock(UnityEngine.Random.Range(1, 7));
                 _grid.ProcessGravityOnce();
-                yield return new WaitForSeconds(0.2f);
+                yield return YieldInstance.WaitForSeconds(0.2f);
             }
 
             yield break;

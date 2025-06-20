@@ -9,9 +9,9 @@ namespace Game
         [SerializeField] private SpriteRenderer _spriteRenderer;
         [SerializeField] private List<Sprite> normalSprites;
 
-        public void SetSprite(BlockColor color)
+        public override void SetSprite(HexagonBlockData blockData)
         {
-            var index = (int)color - 1;
+            var index = (int)blockData.Color - 1;
             _spriteRenderer.sprite = normalSprites[index];
         }
     }

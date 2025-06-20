@@ -49,11 +49,14 @@ namespace Game
         private Queue<Vector2Int> _emptySearchQueue;    //빈공간 탐색용 Queue
         private int _radius;
         private Vector2Int _spawnPos;
-        
-        public HexagonGrid()
-        {
-            _blockDataFactory = new HexagonBlockDataFactory();
+        private Vector2Int? _lastMoved;
 
+
+        public HexagonGrid(HexagonGridView view)
+        {
+            _gridView = view;
+
+            _blockDataFactory = new HexagonBlockDataFactory();
             _map = new Dictionary<Vector2Int, HexagonBlockData>();
             _emptySearchQueue = new Queue<Vector2Int>();
             
@@ -91,15 +94,28 @@ namespace Game
             return _map.Any(data => data.Value == null);
         }
 
-        public HexagonBlockData SpawnNewBlock()
+        public HexagonBlockData SpawnNewBlock(int id)
         {
             if (_map[_spawnPos] != null) return null;
 
-            HexagonBlockData newBlock = _blockDataFactory.Create(Random.Range(1, 7), _spawnPos);
+            HexagonBlockData newBlock = _blockDataFactory.Create(id, _spawnPos);
             _map[_spawnPos] = newBlock;
+
+            _gridView.InstantiateBlock(newBlock);
 
             return newBlock;
         }
+
+        public HexagonBlockData SpawnAt(Vector2Int pos, int id)
+        {
+            if (_map[pos] != null) return null;
+
+            HexagonBlockData newBlock = _blockDataFactory.Create(id, pos);
+            _map[pos] = newBlock;
+
+            return newBlock;
+        }
+
         
         //빈 블럭을 탐색하는 순서를 캐싱한다
         private void CreateSearchQueue()
@@ -169,7 +185,6 @@ namespace Game
             
             Queue<Vector2Int> searchQueue = new Queue<Vector2Int>(_emptySearchQueue);
 
-            //탐색 횟수를 현재 블록 갯수로 제한해서 쓸데없는 반복을 줄임
             int totalBlock = _map.Count(mapData => mapData.Value != null);
 
             for (int i = 0; i < totalBlock; ++i)
@@ -194,8 +209,8 @@ namespace Game
                     var changeTarget = _map[upper];
                     _map[current] = changeTarget;
                     _map[upper] = null;
-                    
-                    _map[current].Move(current, path);
+
+                    MoveBlock(changeTarget, current, path);
                     
                     break;
                 }
@@ -217,8 +232,7 @@ namespace Game
                     current = south;
                     continue;
                 }
-
-                if (start.x > goal.x)
+                else if (start.x > goal.x)
                 {
                     var southWest = current + HexDirection.SouthWest;
                     if (_map.ContainsKey(southWest) && _map[southWest] == null)
@@ -249,23 +263,48 @@ namespace Game
                 {
                     var target = matchInfos[i].BlockList[j];
 
-                    if (_map[target.Pos] == null) continue; //이미 제거됨 
+                    if (_map[target.Pos] == null) continue; //이미 제거됨
                     _map[target.Pos] = null;
-                    target.Remove();
+                    RemoveBlock(target);
                 }
             }
         }
 
-        public void Swap(Vector2Int choice, Vector2Int target)
+        public void Swap(Vector2Int chosen, Vector2Int target)
         {
-            HexagonBlockData choiceData = _map[choice];
+            HexagonBlockData chosenData = _map[chosen];
             HexagonBlockData targetData = _map[target];
 
-            _map[choice] = targetData;
-            _map[target] = choiceData;
+            _map[chosen] = targetData;
+            _map[target] = chosenData;
 
-            choiceData.Move(target, new List<Vector2Int> { target });
-            targetData.Move(choice, new List<Vector2Int> { choice });
+            MoveBlock(targetData, chosen, new List<Vector2Int> { chosen });
+            MoveBlock(chosenData, target, new List<Vector2Int> { target });
+
+            _lastMoved = target;
+        }
+
+        private void MoveBlock(HexagonBlockData data, Vector2Int goal, List<Vector2Int> path)
+        {
+            Vector2Int prev = data.Pos;
+
+            data.Move(goal);
+            _gridView.MoveBlock(data, prev, path);
+        }
+
+        private void RemoveBlock(HexagonBlockData data)
+        {
+            if(_map.ContainsKey(data.Pos))
+            {
+                _map[data.Pos] = null;
+                _gridView.RemoveBlock(data);
+            }
+        }
+
+
+        public void ClearSwapInfo()
+        {
+            _lastMoved = null;
         }
     }
 }

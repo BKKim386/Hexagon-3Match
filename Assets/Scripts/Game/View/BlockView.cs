@@ -8,12 +8,19 @@ namespace Game
     {
         [SerializeField]
         private int speed;
-        
+
+        public abstract void SetSprite(HexagonBlockData blockData);
+
         public void Move(Vector2Int start, List<Vector2Int> path)
         {
             transform.localPosition = Util.AxialToWorldPos(start, HexagonGridView.HexagonRadius);
 
             StartCoroutine(MoveAsync(path));
+        }
+
+        public void Remove()
+        {
+            Destroy(gameObject);
         }
 
         private IEnumerator MoveAsync(List<Vector2Int> path)
@@ -38,5 +45,6 @@ namespace Game
             
             yield break;
         }
+
     }
 }
