@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
@@ -34,11 +35,8 @@ namespace Game
             {
                 yield return StartCoroutine(CoFillGrid());
 
-                var matches = _matchProcessor.SearchMatches();
-
-                if (matches.Count > 0)
+                if (ProcessMatcheAndItem())
                 {
-                    _grid.RemoveMatchedBlockes(matches);
                     continue;
                 }
                 else
@@ -84,16 +82,15 @@ namespace Game
 
                                     yield return YieldInstance.WaitForSeconds(0.2f);
 
-                                    var swapMatches = _matchProcessor.SearchMatches();
-
-                                    if(swapMatches.Count > 0)
+                                    if(ProcessMatcheAndItem())
                                     {
-                                        _grid.RemoveMatchedBlockes(matches);
+                                        _grid.ClearSwapInfo();
                                         break;
                                     }
                                     else
                                     {
                                         _grid.Swap(startAxial, currentAxial);
+                                        _grid.ClearSwapInfo();
                                         yield return YieldInstance.WaitForSeconds(0.2f);
                                     }
 
@@ -119,6 +116,35 @@ namespace Game
             }
 
             yield break;
+        }
+
+        private bool ProcessMatcheAndItem()
+        {
+            var matches = _matchProcessor.SearchMatches();
+
+            if(matches.Count > 0)
+            {
+                var matchedBlocks = new List<HexagonBlockData>();
+
+                foreach(var matchInfo in matches)
+                {
+                    matchedBlocks.AddRange(matchInfo.BlockList);
+                }
+
+                var copy = new List<HexagonBlockData>(matchedBlocks);
+                _grid.RemoveBlockes(matchedBlocks);
+
+                var itemEffectedBlocks = _grid.GetItemEffectedBlocks(copy);
+                _grid.RemoveBlockes(itemEffectedBlocks);
+                
+                _grid.CreateItemBlock(matches);
+
+                return true;
+            }
+            else
+            {
+                return false;
+            }
         }
     }
 }

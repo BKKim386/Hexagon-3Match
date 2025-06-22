@@ -291,7 +291,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   BackgroundPrefab: {fileID: 3650915650284564137, guid: 75e854fb6ce039c4c9adec1a947f52ee, type: 3}
   NormalPrefab: {fileID: -586459285626945370, guid: ce0a9feccde9fac4583eec5a5be6fa6e, type: 3}
-  _hexagonRadius: 36
 --- !u!4 &610098791
 Transform:
   m_ObjectHideFlags: 0
@@ -419,7 +418,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _gridView: {fileID: 610098790}
-  Radius: 3
+  Radius: 5
 --- !u!4 &855199331
 Transform:
   m_ObjectHideFlags: 0

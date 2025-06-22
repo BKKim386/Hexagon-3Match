@@ -6,8 +6,7 @@ namespace Game
 {
     public abstract class BlockView : MonoBehaviour
     {
-        [SerializeField]
-        private int speed;
+        private int speed = 10;
 
         public abstract void SetSprite(HexagonBlockData blockData);
 

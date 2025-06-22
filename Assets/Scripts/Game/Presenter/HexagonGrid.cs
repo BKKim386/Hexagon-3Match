@@ -19,7 +19,7 @@ namespace Game
         SouthEast = 5,
     }
 
-    public static class HexDirection
+    public static class HexagonDirection
     {
         private static Vector2Int[] _dir = new Vector2Int[]
         {
@@ -32,12 +32,12 @@ namespace Game
         };
 
         public static Vector2Int[] All => _dir;
-        public static Vector2Int NorthEast = _dir[(int)Direction.NorthEast];
-        public static Vector2Int North = _dir[(int)Direction.North];
-        public static Vector2Int NorthWest = _dir[(int)Direction.NorthWest];
-        public static Vector2Int SouthWest = _dir[(int)Direction.SouthWest];
-        public static Vector2Int South = _dir[(int)Direction.South];
-        public static Vector2Int SouthEast = _dir[(int)Direction.SouthEast];
+        public readonly static Vector2Int NorthEast = _dir[(int)Direction.NorthEast];
+        public readonly static Vector2Int North = _dir[(int)Direction.North];
+        public readonly static Vector2Int NorthWest = _dir[(int)Direction.NorthWest];
+        public readonly static Vector2Int SouthWest = _dir[(int)Direction.SouthWest];
+        public readonly static Vector2Int South = _dir[(int)Direction.South];
+        public readonly static Vector2Int SouthEast = _dir[(int)Direction.SouthEast];
     }
     
     public class HexagonGrid
@@ -49,7 +49,7 @@ namespace Game
         private Queue<Vector2Int> _emptySearchQueue;    //빈공간 탐색용 Queue
         private int _radius;
         private Vector2Int _spawnPos;
-        private Vector2Int? _lastMoved;
+        private Vector2Int[] _swapRecord;
 
 
         public HexagonGrid(HexagonGridView view)
@@ -106,12 +106,14 @@ namespace Game
             return newBlock;
         }
 
-        public HexagonBlockData SpawnAt(Vector2Int pos, int id)
+        public HexagonBlockData SpawnAtMatched(Vector2Int pos, int id, MatchInfo matchInfo)
         {
             if (_map[pos] != null) return null;
 
-            HexagonBlockData newBlock = _blockDataFactory.Create(id, pos);
+            HexagonBlockData newBlock = _blockDataFactory.Create(id, pos, matchInfo);
             _map[pos] = newBlock;
+
+            _gridView.InstantiateBlock(newBlock);
 
             return newBlock;
         }
@@ -127,7 +129,7 @@ namespace Game
 
             for (int i = 0; i <= height; ++i)
             {
-                var current = root + (HexDirection.North * i);
+                var current = root + (HexagonDirection.North * i);
 
                 if (!_map.ContainsKey(current)) return;
 
@@ -136,7 +138,7 @@ namespace Game
 
                 for (int j = distance; j > 0; --j)
                 {
-                    var left = current + HexDirection.SouthWest * j; //좌하단
+                    var left = current + HexagonDirection.SouthWest * j; //좌하단
                     if (!_map.ContainsKey(left)) throw new Exception($"out of map range {left}");
 
                     _emptySearchQueue.Enqueue(left);
@@ -144,7 +146,7 @@ namespace Game
                 
                 for (int j = distance; j > 0; --j)
                 {
-                    var right = current + HexDirection.SouthEast * j; //우하단
+                    var right = current + HexagonDirection.SouthEast * j; //우하단
                     if (!_map.ContainsKey(right)) throw new Exception($"out of map range {right}");
 
                     _emptySearchQueue.Enqueue(right);
@@ -161,21 +163,21 @@ namespace Game
             bool SearchUpper(Vector2Int current, out Vector2Int upper)
             {
                 //상단 -> 좌상단 -> 우상단 순으로 검사
-                if (_map.ContainsKey(current + HexDirection.North))
+                if (_map.ContainsKey(current + HexagonDirection.North))
                 {
-                    upper = current + HexDirection.North; 
+                    upper = current + HexagonDirection.North; 
                     return true;
                 }
 
-                if (_map.ContainsKey(current + HexDirection.NorthWest))
+                if (_map.ContainsKey(current + HexagonDirection.NorthWest))
                 {
-                    upper = current + HexDirection.NorthWest;
+                    upper = current + HexagonDirection.NorthWest;
                     return true;
                 }
 
-                if (_map.ContainsKey(current + HexDirection.NorthEast))
+                if (_map.ContainsKey(current + HexagonDirection.NorthEast))
                 {
-                    upper = current + HexDirection.NorthEast;
+                    upper = current + HexagonDirection.NorthEast;
                     return true;
                 }
 
@@ -225,7 +227,7 @@ namespace Game
 
             while (current != goal)
             {
-                var south = current + HexDirection.South;
+                var south = current + HexagonDirection.South;
                 if (_map.ContainsKey(south) && _map[south] == null)
                 {
                     path.Add(south);
@@ -234,41 +236,120 @@ namespace Game
                 }
                 else if (start.x > goal.x)
                 {
-                    var southWest = current + HexDirection.SouthWest;
+                    var southWest = current + HexagonDirection.SouthWest;
                     if (_map.ContainsKey(southWest) && _map[southWest] == null)
                     {
                         path.Add(southWest);
                         current = southWest;
                     }
+                    else
+                    {
+                        Debug.LogError($"Path not found: Start: {start} Goal: {goal}");
+                        break;
+                    }
                 }
                 else if (start.x < goal.x)
                 {
-                    var southEast = current + HexDirection.SouthEast;
+                    var southEast = current + HexagonDirection.SouthEast;
                     if (_map.ContainsKey(southEast) && _map[southEast] == null)
                     {
                         path.Add(southEast);
                         current = southEast;
                     }
+                    else
+                    {
+                        Debug.LogError($"Path not found: Start: {start} Goal: {goal}");
+                        break;
+                    }
+                }
+                else
+                {
+                    Debug.LogError($"Path not found: Start: {start} Goal: {goal}");
+                    break;
                 }
             }
 
             return path;
         }
 
-        public void RemoveMatchedBlockes(List<MatchInfo> matchInfos)
+        public void RemoveBlockes(List<HexagonBlockData> blockList)
         {
-            for(int i = 0; i < matchInfos.Count; ++i)
+            for(int i = 0; i < blockList.Count; ++i)
             {
-                for(int j = 0; j < matchInfos[i].BlockList.Count; ++j)
-                {
-                    var target = matchInfos[i].BlockList[j];
+                var data = blockList[i];
+                blockList[i] = null;
 
-                    if (_map[target.Pos] == null) continue; //이미 제거됨
-                    _map[target.Pos] = null;
-                    RemoveBlock(target);
-                }
+                RemoveBlock(data);
             }
         }
+
+        public void CreateItemBlock(List<MatchInfo> matchInfos)
+        {
+            Vector2Int GetSpawnPos(MatchInfo info)
+            {
+                if (_swapRecord != null)
+                {
+                    //스왑으로 움직인 블럭부터 체크
+                    var intersect = info.BlockList.Select(data => data.Pos).Intersect(_swapRecord).ToArray();
+
+                    if (intersect.Length > 0)
+                    {
+                        return intersect[0];
+                    }
+
+                    return info.GetCenter();
+                }
+                else
+                {
+                    return info.GetCenter();
+                }
+            }
+
+
+            for (int i = 0; i < matchInfos.Count; ++i)
+            {
+                MatchInfo info = matchInfos[i];
+                if (info.Type <= MatchType.Line_Three) continue;
+
+                Vector2Int pos = GetSpawnPos(info);
+
+                int id = (int)info.GetColor();
+
+                switch (info.Type)
+                {
+                    case MatchType.Rectangle:
+                        id += (int)BlockType.ItemBoomerang * 10;
+                        break;
+                    case MatchType.Line_Four:
+                    case MatchType.Line_Five:
+                        id += (int)BlockType.ItemRocket * 10;
+                        break;
+                }
+
+                SpawnAtMatched(pos, id, matchInfos[i]);
+            }
+        }
+
+        public List<HexagonBlockData> GetItemEffectedBlocks(List<HexagonBlockData> removeList)
+        {
+            List<HexagonBlockData> effectedBlocks = new List<HexagonBlockData>();
+            List<IItemBlock> itemBlocks = new List<IItemBlock>();
+
+            for(int i = 0; i < removeList.Count; ++i)
+            {
+                itemBlocks.AddRange(removeList.Where(data => data is IItemBlock).Select(itemBlockData => itemBlockData as IItemBlock));
+            }
+
+            for (int i = 0; i < itemBlocks.Count; ++i)
+            {
+                effectedBlocks.AddRange(itemBlocks[i].ProcessItem(_map));
+            }
+
+            effectedBlocks = effectedBlocks.Distinct().ToList();
+
+            return effectedBlocks;
+        }
+
 
         public void Swap(Vector2Int chosen, Vector2Int target)
         {
@@ -281,7 +362,7 @@ namespace Game
             MoveBlock(targetData, chosen, new List<Vector2Int> { chosen });
             MoveBlock(chosenData, target, new List<Vector2Int> { target });
 
-            _lastMoved = target;
+            _swapRecord = new Vector2Int[] { chosen, target };
         }
 
         private void MoveBlock(HexagonBlockData data, Vector2Int goal, List<Vector2Int> path)
@@ -304,7 +385,7 @@ namespace Game
 
         public void ClearSwapInfo()
         {
-            _lastMoved = null;
+            _swapRecord = null;
         }
     }
 }

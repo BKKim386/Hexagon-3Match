@@ -33,4 +33,37 @@ public static class Util
 
         return new Vector2Int(rq, rr);
     }
+
+    public static int GetAxialDistance(this Vector2Int v1,Vector2Int v2)
+    {
+        int dq = v1.x - v2.x;
+        int dr = v1.y - v2.y;
+        int ds = -dq - dr;
+
+        return (Mathf.Abs(dq) + Mathf.Abs(dr) + Mathf.Abs(ds)) / 2;
+    }
+
+    public static class HexagonBlockColor
+    {
+        public static Color Red => new Color(1, 0, 0);
+        public static Color Orange => new Color(1, 0.5f, 0);
+        public static Color Yellow => new Color(1, 0.8f, 0);
+        public static Color Green => new Color(0, 1, 0);
+        public static Color Blue => new Color(0, 0, 1);
+        public static Color Purple => new Color(0.5f, 0, 1);
+
+        public static Color GetColor(Game.BlockColor blockColor)
+        {
+            return blockColor switch
+            {
+                Game.BlockColor.Red => Red,
+                Game.BlockColor.Orange => Orange,
+                Game.BlockColor.Yellow => Yellow,
+                Game.BlockColor.Green => Green,
+                Game.BlockColor.Blue => Blue,
+                Game.BlockColor.Purple => Purple,
+                _ => Color.white
+            };
+        }
+    }
 }

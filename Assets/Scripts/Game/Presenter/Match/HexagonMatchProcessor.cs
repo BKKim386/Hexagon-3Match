@@ -7,33 +7,6 @@ using UnityEngine;
 
 namespace Game
 {
-    public enum MatchType   //매칭 아이템 생성 우선순위(내림차순)
-    {
-        None = 0,
-        Line_Three = 1,
-        Rectangle = 2,
-        Line_Four = 3,
-        Line_Five = 4
-    }
-
-    public class MatchInfo
-    {
-        public MatchType Type;
-        public List<HexagonBlockData> BlockList;
-
-        public MatchInfo(MatchType type, List<HexagonBlockData> blockList)
-        {
-            Type = type;
-            BlockList = blockList;
-        }
-
-        public Vector2Int GetCenter()
-        {
-            int center = BlockList.Count / 2;
-
-            return BlockList[center].Pos;
-        }
-    }
 
     public class HexagonMatchProcessor
     {
@@ -55,7 +28,75 @@ namespace Game
             matched.AddRange(_lineMatchGroup.Search());
             matched.AddRange(_rectangleMathGroup.Search());
 
+            matched = JoinGroups(matched);
+
             return matched;
+        }
+
+        //겹치는 MatchInfo를 결합
+        private List<MatchInfo> JoinGroups(List<MatchInfo> matchInfos)
+        {
+            List<MatchInfo> ret = new List<MatchInfo>();
+
+            Dictionary<BlockColor, List<MatchInfo>> colorGroup = new Dictionary<BlockColor, List<MatchInfo>>()
+            {
+                { BlockColor.Blue, new List<MatchInfo>() },
+                { BlockColor.Green, new List<MatchInfo>() },
+                { BlockColor.Orange, new List<MatchInfo>() },
+                { BlockColor.Purple, new List<MatchInfo>() },
+                { BlockColor.Red, new List<MatchInfo>() },
+                { BlockColor.Yellow, new List<MatchInfo>() },
+            };
+
+            for(int i = 0; i < matchInfos.Count; ++i)
+            {
+                colorGroup[matchInfos[i].GetColor()].Add(matchInfos[i]);
+            }
+
+            foreach(var group in colorGroup)
+            {
+                List<List<MatchInfo>> intersectGroups = new List<List<MatchInfo>>();
+                List<MatchInfo> infoList = group.Value;
+
+                //1. 겹치는 Match끼리 모음
+                for (int i = 0; i < infoList.Count; ++i)
+                {
+                    List<Vector2Int> currentBlockPos = infoList[i].BlockList.Select(data => data.Pos).ToList();
+
+                    List<MatchInfo> matchedList = intersectGroups.FirstOrDefault(g => g.Any(exist => exist.BlockList.Select(data => data.Pos).Intersect(currentBlockPos).Any()));
+
+                    if(matchedList != null)
+                    {
+                        matchedList.Add(infoList[i]);
+                    }
+                    else
+                    {
+                        intersectGroups.Add(new List<MatchInfo>() { infoList[i] });
+                    }
+                }
+
+                List<MatchInfo> retList = new List<MatchInfo>();
+
+                //2. 하나의 Match로 통합
+                for(int i = 0; i < intersectGroups.Count; ++i)
+                {
+                    List<HexagonBlockData> blockList = new List<HexagonBlockData>();
+                    MatchType matchType = intersectGroups[i].Max(matchInfo => matchInfo.Type);
+
+                    for(int j = 0; j < intersectGroups[i].Count; ++j)
+                    {
+                        blockList.AddRange(intersectGroups[i][j].BlockList);
+                    }
+
+                    blockList = blockList.Distinct().ToList();
+
+                    MatchInfo joinedInfo = new MatchInfo(matchType, blockList);
+
+                    ret.Add(joinedInfo);
+                }
+            }
+
+            return ret;
         }
     }
 
@@ -90,9 +131,9 @@ namespace Game
         {
             _matchList.Clear();
 
-            _matchList.AddRange(MatchLine(HexDirection.NorthEast, HexDirection.SouthWest));
-            _matchList.AddRange(MatchLine(HexDirection.North, HexDirection.South));
-            _matchList.AddRange(MatchLine(HexDirection.NorthWest, HexDirection.SouthEast));
+            _matchList.AddRange(MatchLine(HexagonDirection.NorthEast, HexagonDirection.SouthWest));
+            _matchList.AddRange(MatchLine(HexagonDirection.North, HexagonDirection.South));
+            _matchList.AddRange(MatchLine(HexagonDirection.NorthWest, HexagonDirection.SouthEast));
 
             return _matchList;   
         }
@@ -135,8 +176,6 @@ namespace Game
                     }
                 }
 
-                MatchType type = MatchType.None;
-
                 if (matchBlockList.Count == 3)
                 {
                     matchInfoList.Add(new MatchInfo(MatchType.Line_Three, matchBlockList));
@@ -167,9 +206,9 @@ namespace Game
         {
             _matchList.Clear();
 
-            _matchList.AddRange(MatchRectangle(HexDirection.NorthEast, HexDirection.SouthEast));
-            _matchList.AddRange(MatchRectangle(HexDirection.SouthEast, HexDirection.South));
-            _matchList.AddRange(MatchRectangle(HexDirection.South, HexDirection.SouthWest));
+            _matchList.AddRange(MatchRectangle(HexagonDirection.NorthEast, HexagonDirection.SouthEast));
+            _matchList.AddRange(MatchRectangle(HexagonDirection.SouthEast, HexagonDirection.South));
+            _matchList.AddRange(MatchRectangle(HexagonDirection.South, HexagonDirection.SouthWest));
 
             return _matchList;
         }

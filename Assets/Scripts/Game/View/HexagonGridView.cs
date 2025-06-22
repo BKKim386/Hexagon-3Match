@@ -13,10 +13,16 @@ namespace Game
         [SerializeField] private GameObject BackgroundPrefab;
         [SerializeField] private NormalBlockView NormalPrefab;
 
+        private BlockViewFactory _blockViewFactory;
         private Dictionary<HexagonBlockData, BlockView> _blockViewMap = new Dictionary<HexagonBlockData, BlockView>();
         private List<Vector3> _centers = new List<Vector3>();
 
         public IReadOnlyDictionary<HexagonBlockData, BlockView> BlockMap => _blockViewMap;
+
+        private void Awake()
+        {
+            _blockViewFactory = new BlockViewFactory(transform);
+        }
 
         public void CreateMapBackground(List<Vector2Int> posList)
         {
@@ -46,11 +52,8 @@ namespace Game
             }
             else
             {
-                BlockView newInstance = Instantiate(NormalPrefab, transform);
-                newInstance.transform.localScale = Vector3.one;
+                BlockView newInstance = _blockViewFactory.Create(data);
                 newInstance.transform.localPosition = Util.AxialToWorldPos(data.Pos, HexagonRadius);
-
-                newInstance.SetSprite(data);
 
                 _blockViewMap.Add(data, newInstance);
 
